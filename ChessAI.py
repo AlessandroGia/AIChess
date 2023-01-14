@@ -122,15 +122,42 @@ class ChessAI:
         piece = self.__board.piece_at(chess.parse_square(square))
         promotion = ''
         if piece and (not self.__selected_square or (self.__selected_square and piece.color == self.__board.piece_at(chess.parse_square(self.__selected_square)).color)):
+            self.__update()
+
             self.__selected_square = square
+            legal_moves = list(self.__board.legal_moves)
+            legal_moves = [move for move in legal_moves if move.from_square == chess.parse_square(square)]
+
+            destination_squares = []
+
+            for move in legal_moves:
+                destination_square = self.__square_to_pixel(move.to_square)
+                destination_squares.append(destination_square)
+
+            for i, (x, y) in enumerate(destination_squares):
+                destination_squares[i] = (x + 25, y + 25)
+
+            for (x, y) in destination_squares:
+                pygame.draw.circle(self.__screen, (255, 0, 0), (x-2, self.__size - y + 3), 20, 3)
+
+            pygame.display.update()
+
         elif self.__selected_square:
             if (self.__board.piece_at(chess.parse_square(self.__selected_square)).symbol() == 'P' or self.__board.piece_at(chess.parse_square(self.__selected_square)).symbol() == 'p') and ('1' in square or '8' in square):
                 promotion = self.__create_popup()
 
             mv = chess.Move.from_uci(self.__selected_square + square + promotion)
-            #print(self.__board.legal_moves)
+
             if mv in self.__board.legal_moves:
                 self.__board.push(mv)
+
+            '''
+            if self.__board.is_check():
+                king_square = chess.square(self.__board.king(self.__board.turn))
+                print(king_square)
+            '''
+
+
             self.__selected_square = None
             self.__update()
 
