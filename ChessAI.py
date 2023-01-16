@@ -23,7 +23,7 @@ class ChessAI:
         self.__engine = chess.engine.SimpleEngine.popen_uci("/opt/homebrew/bin/stockfish")
 
         self.__speed = 0.1
-        self.__depth = 5
+        self.__depth = 3
 
         self.__pieces_values = {
             'p': 1,
@@ -154,11 +154,13 @@ class ChessAI:
 
     def __ai_turn(self):
         value, mov_ai = self.__minimax(self.__board, self.__depth, -float('inf'), float('inf'), True)
-        print('Fatto')
         self.__board.push(mov_ai)
+        #result = self.__engine.play(self.__board, chess.engine.Limit(depth=5))
+        #self.__board.push(result.move)
         self.__update()
 
         if self.__board.is_check():
+            print("scacco")
             self.__highlight_check()
             pygame.display.update()
 
@@ -239,6 +241,8 @@ class ChessAI:
                 self.__ai_turn()
 
 
+    '''
+
     def __evaluate(self):
         score = 0
         checkmate = self.__board.is_checkmate()
@@ -260,22 +264,51 @@ class ChessAI:
                 score += self.__pieces_values[piece.symbol()]
 
         return score
-
+    '''
     def __minimax(self, board, depth, alpha, beta, maximizingPlayer):
         if depth == 0 or board.is_game_over():
-            '''
-            info = self.__engine.analyse(self.__board, chess.engine.Limit(time=self.__speed))
-            score = info["score"].relative.score()
-            if not score:
-                return -float('inf'), None
 
-            if maximizingPlayer:
-                return -score, None
-            return score, None
-            '''
-            score = self.__evaluate()
-            print(score)
-            return score, None
+            info = self.__engine.analyse(self.__board, chess.engine.Limit(depth=0))
+            score = info["score"].black()
+
+            if not maximizingPlayer:
+                if not score.score():
+                    if score.mate() == 5:
+                        return 9999, None
+                    elif score.mate() == 4:
+                        return 10999, None
+                    elif score.mate() == 3:
+                        return 11999, None
+                    elif score.mate() == 2:
+                        return 12999, None
+                    elif score.mate() == 1:
+                        return 13999, None
+                    elif score.mate() == 0:
+                        return 14999, None
+                    else:
+                        return -9999, None
+            # score = self.__evaluate()
+
+                return score.score(), None
+            else:
+                if not score.score():
+                    if score.mate() == 5:
+                        return -9999, None
+                    elif score.mate() == 4:
+                        return -10999, None
+                    elif score.mate() == 3:
+                        return -11999, None
+                    elif score.mate() == 2:
+                        return -12999, None
+                    elif score.mate() == 1:
+                        return -13999, None
+                    elif score.mate() == 0:
+                        return -14999, None
+                    else:
+                        return +9999, None
+                    # score = self.__evaluate()
+
+                return -(score.score()), None
 
         bestMove = None
         if maximizingPlayer:
