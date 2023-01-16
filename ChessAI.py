@@ -11,9 +11,6 @@ class ChessAI:
         self.__squares = {}
         self.__pieces = {}
         self.__board = chess.Board()
-        print(dir(self.__board))
-        print(self.__board._board_state())
-        print(self.__board.status())
         self.__square_size = self.__size // 8
         self.__screen = pygame.display.set_mode((self.__size, self.__size))
 
@@ -25,8 +22,23 @@ class ChessAI:
 
         self.__engine = chess.engine.SimpleEngine.popen_uci("/opt/homebrew/bin/stockfish")
 
-        self.__speed = 0.0001
-        self.__depth = 1
+        self.__speed = 0.1
+        self.__depth = 5
+
+        self.__pieces_values = {
+            'p': 1,
+            'P': -1,
+            'n': 3,
+            'N': -3,
+            'b': 3,
+            'B': -3,
+            'r': 5,
+            'R': -5,
+            'q': 9,
+            'Q': -9,
+            'k': 999,
+            'K': -999
+        }
 
     @staticmethod
     def __invert_position(position: str) -> str:
@@ -141,7 +153,7 @@ class ChessAI:
         self.__screen.blit(check_surface, (king_square[0] - 2, king_square[1] - 2))
 
     def __ai_turn(self):
-        value, mov_ai = self.__minimax(self.__board, self.__depth, float('-inf'), float('inf'), False)
+        value, mov_ai = self.__minimax(self.__board, self.__depth, -float('inf'), float('inf'), True)
         print('Fatto')
         self.__board.push(mov_ai)
         self.__update()
@@ -227,89 +239,47 @@ class ChessAI:
                 self.__ai_turn()
 
 
+    def __evaluate(self):
+        score = 0
+        checkmate = self.__board.is_checkmate()
+        white_turn = self.__board.turn
 
-    '''
-    def __select_or_move(self, square):
-        piece = self.__board.piece_at(chess.parse_square(square))
-        promotion = ''
-        if piece and (not self.__selected_square or (self.__selected_square and piece.color == self.__board.piece_at(chess.parse_square(self.__selected_square)).color)):
+        if checkmate and white_turn:
+            print('1) checkmate: ', white_turn)
+            return 9999
+        elif checkmate and not white_turn:
+            print('2) checkmate: ', white_turn)
+            return -9999
 
-            self.__update()
+        if self.__board.is_stalemate() or self.__board.is_insufficient_material() or self.__board.is_repetition():
+            return 0
 
-            if self.__board.is_check():
-                self.__highlight_check()
+        for i in range(64):
+            piece = self.__board.piece_at(i)
+            if piece:
+                score += self.__pieces_values[piece.symbol()]
 
-            self.__selected_square = square
-            legal_moves = list(self.__board.legal_moves)
-            legal_moves = [move for move in legal_moves if move.from_square == chess.parse_square(square)]
-
-            destination_squares = []
-
-            self.__highlight_selected()
-
-            for move in legal_moves:
-                is_capturable = False
-                tmp_moves = list(self.__board.legal_moves)
-                lgl_moves = str(self.__board.legal_moves)
-                lgl_moves = lgl_moves.split('(')[1]
-                lgl_moves = lgl_moves.split(')')[0]
-                lgl_moves = lgl_moves.split(',')
-                c = 0
-
-                for mov in tmp_moves:
-                    if move == mov:
-                        break
-                    c += 1
-
-                if 'x' in lgl_moves[c]:
-                    is_capturable = True
-
-                destination_square = self.__square_to_pixel(move.to_square)
-                destination_squares.append([destination_square, is_capturable])
-
-            for i, ((x, y), z) in enumerate(destination_squares):
-                destination_squares[i][0] = (x + 25, y + 25)
-
-            for ((x, y), z) in destination_squares:
-                lgl_moves_surface = pygame.Surface((self.__square_size, self.__square_size), pygame.SRCALPHA)
-                lgl_moves_surface.set_alpha(100)
-                if z:
-                    pygame.draw.circle(lgl_moves_surface, (128, 128, 128), (25, 25), 25, 3)
-                    self.__screen.blit(lgl_moves_surface, (x - 27, self.__size - y - 23))
-                else:
-                    pygame.draw.circle(lgl_moves_surface, (128, 128, 128), (25, 25), 8)
-                    self.__screen.blit(lgl_moves_surface, (x - 27, self.__size - y - 23))
-
-            pygame.display.update()
-
-        elif self.__selected_square:
-            if (self.__board.piece_at(chess.parse_square(self.__selected_square)).symbol() == 'P' or self.__board.piece_at(chess.parse_square(self.__selected_square)).symbol() == 'p') and ('1' in square or '8' in square):
-                promotion = self.__create_popup()
-
-            mv = chess.Move.from_uci(self.__selected_square + square + promotion)
-
-            if mv in self.__board.legal_moves:
-                self.__board.push(mv)
-
-            self.__selected_square = None
-            self.__update()
-
-            if self.__board.is_check():
-                self.__highlight_check()
-                pygame.display.update()
-    '''
+        return score
 
     def __minimax(self, board, depth, alpha, beta, maximizingPlayer):
         if depth == 0 or board.is_game_over():
-            info = self.__engine.analyse(self.__board, chess.engine.Limit(depth=10))
+            '''
+            info = self.__engine.analyse(self.__board, chess.engine.Limit(time=self.__speed))
             score = info["score"].relative.score()
             if not score:
                 return -float('inf'), None
+
+            if maximizingPlayer:
+                return -score, None
+            return score, None
+            '''
+            score = self.__evaluate()
+            print(score)
             return score, None
 
         bestMove = None
         if maximizingPlayer:
-            bestValue = float('-inf')
+            bestValue = -float('inf')
             for move in board.legal_moves:
                 board.push(move)
                 value, _ = self.__minimax(board, depth - 1, alpha, beta, False)
