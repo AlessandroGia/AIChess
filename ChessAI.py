@@ -2,6 +2,7 @@ import pygame
 import chess
 import chess.engine
 import os
+import time
 
 
 class ChessAI:
@@ -96,7 +97,7 @@ class ChessAI:
     def __create_popup(self):
 
         # Create the popup surface
-        popup_size = (self.__size / 1.5, self.__size / 1.5)
+        popup_size = (self.__size / 3.5, self.__size / 2.5)
         popup = pygame.Surface(popup_size)
         popup_rect = popup.get_rect(center=(self.__size / 2, self.__size / 2))
 
@@ -106,7 +107,7 @@ class ChessAI:
 
         # Create the buttons for the popup
         font = pygame.font.Font(None, 30)
-        button_texts = ["Donna", "Torre", "Alfiere", "Cavallo"]
+        button_texts = ["DONNA", "TORRE", "ALFIERE", "CAVALLO"]
         pieces = ['q', 'r', 'b', 'n']
         buttons = []
         for i, text in enumerate(button_texts):
@@ -119,7 +120,7 @@ class ChessAI:
         # Position the buttons on the popup
         button_rects = []
         for i, button in enumerate(buttons):
-            button_rect = button.get_rect(center=(popup_size[0] / 2, 60 + i * 50))
+            button_rect = button.get_rect(center=(popup_size[0] / 2, 60 + i * 42))
             popup.blit(button, button_rect)
             button_rects.append(button_rect)
 
@@ -134,7 +135,7 @@ class ChessAI:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     # Check if the user clicked on one of the buttons
                     mouse_pos = pygame.mouse.get_pos()
-                    mouse_pos = (mouse_pos[0] - 67, mouse_pos[1] - 67)
+                    mouse_pos = (mouse_pos[0] - ((self.__size / 2) - ((self.__size / 3.5) / 2)), mouse_pos[1] - ((self.__size /2) - ((self.__size / 2.5) / 2)))
                     for i, button_rect in enumerate(button_rects):
                         if button_rect.collidepoint(mouse_pos):
                             return pieces[i]
@@ -247,79 +248,107 @@ class ChessAI:
                 self.__highlight_check()
                 pygame.display.update()
 
-            if done_move:
+            if self.__board.is_checkmate() or self.__board.is_stalemate() or self.__board.is_repetition():
+                time.sleep(2)
+                self.__popup_game_over()
 
+            if done_move:
                 self.__ai_turn()
 
+            if self.__board.is_checkmate() or self.__board.is_stalemate() or self.__board.is_repetition():
+                time.sleep(2)
+                self.__popup_game_over()
 
-    '''
+    def __popup_game_over(self):
+        popup_size = (self.__size /1.8, self.__size / 3)
+        popup = pygame.Surface(popup_size)
+        popup_rect = popup.get_rect(center=(self.__size / 2, self.__size / 2))
 
-    def __evaluate(self):
-        score = 0
-        checkmate = self.__board.is_checkmate()
-        white_turn = self.__board.turn
+        # Draw the background and border of the popup
+        pygame.draw.rect(popup, (255, 255, 255), (0, 0, popup_size[0], popup_size[1]))
+        pygame.draw.rect(popup, (0, 0, 0), (0, 0, popup_size[0], popup_size[1]), 2)
 
-        if checkmate and white_turn:
-            print('1) checkmate: ', white_turn)
-            return 9999
-        elif checkmate and not white_turn:
-            print('2) checkmate: ', white_turn)
-            return -9999
+        ##
 
-        if self.__board.is_stalemate() or self.__board.is_insufficient_material() or self.__board.is_repetition():
-            return 0
+        result = self.__board.result()
 
-        for i in range(64):
-            piece = self.__board.piece_at(i)
-            if piece:
-                score += self.__pieces_values[piece.symbol()]
+        font = pygame.font.Font(None, 50)
 
-        return score
-    '''
+        lbl = pygame.Surface((popup_size[0] / 1.2, popup_size[1] / 2))
+        pygame.draw.rect(lbl, (255, 255, 255), (0, 0, popup_size[0], popup_size[1]))
+        lbl_text = font.render("GAME OVER!", True, (0, 0, 0))
+        if result == '*':
+            result = '1/2-1/2'
+        lbl_text_2 = font.render(result, True, (0, 0, 0))
+        lbl.blit(lbl_text, (30, 6))
+        lbl.blit(lbl_text_2, (popup_size[0] / 2 - 50, 55))
+
+        lbl_rect = lbl.get_rect(center=(popup_size[0] / 2 - 2, 100))
+        popup.blit(lbl, lbl_rect)
+
+        self.__screen.blit(popup, popup_rect)
+        pygame.display.update()
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.__running = False
+                    break
+
     def __minimax(self, board, depth, alpha, beta, maximizingPlayer):
         if depth == 0 or board.is_game_over():
 
             info = self.__engine.analyse(self.__board, chess.engine.Limit(depth=0))
             score = info["score"].black()
 
-            if not maximizingPlayer:
-                if not score.score():
-                    if score.mate() == 5:
-                        return 9999, None
-                    elif score.mate() == 4:
-                        return 10999, None
-                    elif score.mate() == 3:
-                        return 11999, None
-                    elif score.mate() == 2:
-                        return 12999, None
-                    elif score.mate() == 1:
-                        return 13999, None
-                    elif score.mate() == 0:
-                        return 14999, None
-                    else:
-                        return -9999, None
-            # score = self.__evaluate()
-
-                return score.score(), None
-            else:
-                if not score.score():
-                    if score.mate() == 5:
-                        return -9999, None
-                    elif score.mate() == 4:
-                        return -10999, None
-                    elif score.mate() == 3:
-                        return -11999, None
-                    elif score.mate() == 2:
-                        return -12999, None
-                    elif score.mate() == 1:
-                        return -13999, None
-                    elif score.mate() == 0:
-                        return -14999, None
-                    else:
-                        return +9999, None
-                    # score = self.__evaluate()
-
-                return -(score.score()), None
+            if not score.score():
+                if score.mate() == 21:
+                    return 9999, None
+                elif score.mate() == 20:
+                    return 10999, None
+                elif score.mate() == 19:
+                    return 11999, None
+                elif score.mate() == 18:
+                    return 12999, None
+                elif score.mate() == 17:
+                    return 13999, None
+                elif score.mate() == 16:
+                    return 14999, None
+                elif score.mate() == 15:
+                    return 15999, None
+                elif score.mate() == 14:
+                    return 16999, None
+                elif score.mate() == 13:
+                    return 17999, None
+                elif score.mate() == 12:
+                    return 18999, None
+                elif score.mate() == 11:
+                    return 19999, None
+                elif score.mate() == 10:
+                    return 20999, None
+                elif score.mate() == 9:
+                    return 21999, None
+                elif score.mate() == 8:
+                    return 22999, None
+                elif score.mate() == 7:
+                    return 23999, None
+                elif score.mate() == 6:
+                    return 24999, None
+                elif score.mate() == 5:
+                    return 25999, None
+                elif score.mate() == 4:
+                    return 26999, None
+                elif score.mate() == 3:
+                    return 27999, None
+                elif score.mate() == 2:
+                    return 28999, None
+                elif score.mate() == 1:
+                    return 29999, None
+                elif score.mate() == 0:
+                    return 31999, None
+                else:
+                    return -9999, None
+        # score = self.__evaluate()
+            return score.score(), None
 
         bestMove = None
         if maximizingPlayer:
@@ -354,6 +383,7 @@ class ChessAI:
             return bestValue, bestMove
 
     def run(self):
+
         self.__update()
         while self.__running:
             for event in pygame.event.get():
