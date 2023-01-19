@@ -7,7 +7,8 @@ import os
 class ChessAI:
     def __init__(self) -> None:
         pygame.init()
-        self.__size = 400
+        self.__size = 600
+        self.__error_coords = 5
         self.__squares = {}
         self.__pieces = {}
         self.__board = chess.Board()
@@ -44,10 +45,10 @@ class ChessAI:
     def __invert_position(position: str) -> str:
         return chess.square_name(chess.square_mirror(chess.parse_square(position)))
 
-    def __square_to_pixel(self, square: int, error: int = 2) -> (int, int):
+    def __square_to_pixel(self, square: int) -> (int, int):
         col = square // 8
         row = square % 8
-        return row * self.__square_size + error, col * self.__square_size + error
+        return row * self.__square_size + self.__error_coords, col * self.__square_size + self.__error_coords
 
     def __init_squares(self) -> None:
         for i in range(64):
@@ -143,14 +144,14 @@ class ChessAI:
         highlight_surface = pygame.Surface((self.__square_size, self.__square_size), pygame.SRCALPHA)
         highlight_surface.fill((250, 237, 39))
         highlight_surface.set_alpha(80)
-        self.__screen.blit(highlight_surface, (coords[0] - 2, self.__size - coords[1] - 48))
+        self.__screen.blit(highlight_surface, (coords[0] - self.__error_coords, self.__size - coords[1] + self.__error_coords - self.__square_size))
 
     def __highlight_check(self):
         king_square = self.__square_to_pixel(chess.square_mirror(self.__board.king(self.__board.turn)))
         check_surface = pygame.Surface((self.__square_size, self.__square_size), pygame.SRCALPHA)
         check_surface.fill((255, 0, 0))
         check_surface.set_alpha(80)
-        self.__screen.blit(check_surface, (king_square[0] - 2, king_square[1] - 2))
+        self.__screen.blit(check_surface, (king_square[0] - self.__error_coords, king_square[1] - self.__error_coords))
 
     def __ai_turn(self):
         value, mov_ai = self.__minimax(self.__board, self.__depth, -float('inf'), float('inf'), True)
@@ -208,17 +209,27 @@ class ChessAI:
                 lgl_moves_surface = pygame.Surface((self.__square_size, self.__square_size), pygame.SRCALPHA)
                 lgl_moves_surface.set_alpha(100)
                 if z:
-                    pygame.draw.circle(lgl_moves_surface, (128, 128, 128), (25, 25), 25, 3)
-                    self.__screen.blit(lgl_moves_surface, (x - 27, self.__size - y - 23))
+                    pygame.draw.circle(lgl_moves_surface, (128, 128, 128), (self.__square_size/2 + 1, self.__square_size/2 - 1), self.__square_size / 2.2, 5)
+                    self.__screen.blit(lgl_moves_surface, ((x + self.__error_coords - self.__square_size / 2) + 3, self.__size - y - self.__error_coords - self.__square_size / 2))
                 else:
-                    pygame.draw.circle(lgl_moves_surface, (128, 128, 128), (25, 25), 8)
-                    self.__screen.blit(lgl_moves_surface, (x - 27, self.__size - y - 23))
+                    pygame.draw.circle(lgl_moves_surface, (128, 128, 128), (self.__square_size/2 , self.__square_size/2), self.__square_size / 5)
+                    self.__screen.blit(lgl_moves_surface, ((x + self.__error_coords - self.__square_size / 2) + 3, self.__size - y - self.__error_coords - self.__square_size / 2))
 
             pygame.display.update()
         elif self.__selected_square:
-            if (self.__board.piece_at(
-                    chess.parse_square(self.__selected_square)).symbol() == 'P' or self.__board.piece_at(
-                    chess.parse_square(self.__selected_square)).symbol() == 'p') and ('1' in square or '8' in square):
+
+            sq = self.__selected_square[0]
+            s = square[0]
+
+            diff = abs(ord(sq) - ord(s))
+
+            if (
+                    self.__board.piece_at(chess.parse_square(self.__selected_square)).symbol() == 'P' and
+                    '8' in square and '7' in self.__selected_square and self.__board.turn and
+                    (diff == 0 and not self.__board.piece_at(chess.parse_square(square)) or
+                     (diff == 1 and self.__board.piece_at(chess.parse_square(square)))
+                    )
+            ):
                 promotion = self.__create_popup()
 
             mv = chess.Move.from_uci(self.__selected_square + square + promotion)
