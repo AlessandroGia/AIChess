@@ -301,7 +301,27 @@ class ChessAI:
             score = info["score"].black()
 
             if not score.score():
-                if score.mate() == 21:
+                if score.mate() == 31:
+                    return 8899, None
+                elif score.mate() == 30:
+                    return 8999, None
+                elif score.mate() == 29:
+                    return 9199, None
+                elif score.mate() == 28:
+                    return 9299, None
+                elif score.mate() == 27:
+                    return 9399, None
+                elif score.mate() == 26:
+                    return 9499, None
+                elif score.mate() == 25:
+                    return 9599, None
+                elif score.mate() == 24:
+                    return 9699, None
+                elif score.mate() == 23:
+                    return 9799, None
+                elif score.mate() == 22:
+                    return 9899, None
+                elif score.mate() == 21:
                     return 9999, None
                 elif score.mate() == 20:
                     return 10999, None
